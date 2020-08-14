@@ -45,23 +45,28 @@ class MatchedFilter():
                                              np.tan(vertical_views))
         #return D
         D = self._rotate_viewing_directions(D, orientation)
-        #XSself.plot_D(D)
         return D
 
-    def  plot_D(self, D):
+    def  plot_D(self, show=False):
         import matplotlib.pyplot as plt
+        from matplotlib.figure import Figure
         from mpl_toolkits.mplot3d import Axes3D
         print(self.rot_mat)
         V = np.matmul(np.linalg.inv(self.rot_mat), np.array([0, 0, 1]))
-        fig = plt.figure()
+        if not show:
+            fig = Figure()
+
+        else:
+            fig = plt.figure()
 #        ax = Axes3d(fig)
         ax = fig.add_subplot(111, projection='3d')
         ax.set_xlim3d(-1, 1)
         ax.set_ylim3d(-1, 1)
         ax.set_zlim3d(-1, 1)
         ax.quiver(0, 0, 0, V[0], V[1], V[2], normalize=True)
-        ax.quiver(0, 0, 0, self.axis[0], self.axis[1], self.axis[2])
+        ax.quiver(0, 0, 0, self.axis[0], self.axis[1], self.axis[2], normalize=True)
         plt.show()
+        return fig
 
 
     def _rotate_viewing_directions(self, D, orientation):
@@ -182,7 +187,9 @@ if __name__ == '__main__':
                        args.fov, args.fov_type,
                        orientation=args.orientation,
                        axis=args.axis)
-    mf.plot(show=True)
+    mf.plot(show=False)
+
+    mf.plot_D()
 
     
 
