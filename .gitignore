@@ -372,3 +372,6 @@ npm-debug.log
 # pytype static type analyzer
 
 # End of https://www.toptal.com/developers/gitignore/api/emacs,code,flask,nuxt,nuxtjs,python
+
+
+Pipfile
