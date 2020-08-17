@@ -18,7 +18,7 @@ class MatchedFilter():
         orientation = np.array(orientation, dtype=float)
         self.rot_mat = self._rotation_matrix(orientation)
         axis = np.array(axis, dtype=float)
-        self.axis = np.matmul(self._rotation_matrix(axis), np.array([0, 0, 1]))
+        self.axis = np.matmul(self._rotation_matrix(axis).T, np.array([0, 0, 1]))
         self.D = self._get_viewing_directions(orientation)
         self.matched_filter = self.generate_filter()
 
@@ -46,28 +46,6 @@ class MatchedFilter():
         #return D
         D = self._rotate_viewing_directions(D, orientation)
         return D
-
-    def  plot_D(self, show=False):
-        import matplotlib.pyplot as plt
-        from matplotlib.figure import Figure
-        from mpl_toolkits.mplot3d import Axes3D
-        print(self.rot_mat)
-        V = np.matmul(np.linalg.inv(self.rot_mat), np.array([0, 0, 1]))
-        if not show:
-            fig = Figure()
-
-        else:
-            fig = plt.figure()
-#        ax = Axes3d(fig)
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlim3d(-1, 1)
-        ax.set_ylim3d(-1, 1)
-        ax.set_zlim3d(-1, 1)
-        ax.quiver(0, 0, 0, V[0], V[1], V[2], normalize=True)
-        ax.quiver(0, 0, 0, self.axis[0], self.axis[1], self.axis[2], normalize=True)
-        plt.show()
-        return fig
-
 
     def _rotate_viewing_directions(self, D, orientation):
         for ii in range(self.cam_h):
@@ -142,6 +120,30 @@ class MatchedFilter():
                     V[::step_size, ::step_size],
                     pivot='mid', scale=scale)
 
+        plt.show()
+        return fig
+    
+    def  plot_D(self, show=False):
+        import matplotlib.pyplot as plt
+        from matplotlib.figure import Figure
+        from mpl_toolkits.mplot3d import Axes3D
+        print(self.rot_mat)
+        V = np.matmul(np.linalg.inv(self.rot_mat), np.array([0, 0, 1]))
+        if not show:
+            fig = Figure()
+
+        else:
+            fig = plt.figure()
+#        ax = Axes3d(fig)
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlim3d(-1, 1)
+        ax.set_ylim3d(-1, 1)
+        ax.set_zlim3d(-1, 1)
+        ax.set_xlabel('X axis')
+        ax.set_ylabel('Y axis')
+        ax.set_zlabel('Z axis')
+        ax.quiver(0, 0, 0, V[0], V[1], V[2], normalize=True)
+        ax.quiver(0, 0, 0, self.axis[0], self.axis[1], self.axis[2], normalize=True)
         plt.show()
         return fig
 
