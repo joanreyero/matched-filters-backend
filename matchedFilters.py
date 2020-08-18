@@ -6,7 +6,7 @@ import io
 class MatchedFilter():
     def __init__(self, cam_w, cam_h, fov, fov_type='fov',
                  orientation=[0.0, 0.0, 0.0],
-                 axis=[1.0, 0.0, 0.0]):
+                 axis=[0.0, 0.0, 0.0]):
 
         self.cam_w = cam_w
         self.cam_h = cam_h
@@ -147,6 +147,21 @@ class MatchedFilter():
         plt.show()
         return fig
 
+    def get_unit_directions(self):
+
+        def get_unit(v, shorter=1):
+            return list(v / (np.linalg.norm(v) * shorter))
+
+        return {
+            'camx': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
+                                       np.array([1, 0, 0])), shorter=1.2),
+            'camy': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
+                                       np.array([0, 1, 0])), shorter=1.2),
+            'camz': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
+                                       np.array([0, 0, 1])), shorter=1.2),
+            'axis': get_unit(self.axis)
+        }
+
     def get_matched_filter_str(self):
         print(np.array_str(self.matched_filter))
         return np.array_str(self.matched_filter)
@@ -179,10 +194,10 @@ if __name__ == '__main__':
                         Default: K""")
     parser.add_argument('-o', '--orientation', nargs='+', default=[0.0, 0.0, 0.0],
                         help="""Orientation of the camera. [yaw, pitch, roll]
-                        Default [0.0, 90.0, 0.0]""")
+                        Default [0.0, 0.0, 0.0]""")
     parser.add_argument('-a', '--axis', nargs='+', default=[0.0, 0.0, 0.0],
                         help="""Prefered axis of orientation
-                        Default: [1.0, 0.0, 0.0]""")
+                        Default: [0.0, 0.0, 0.0]""")
     args = parser.parse_args()
 
     mf = MatchedFilter(args.width, args.height,

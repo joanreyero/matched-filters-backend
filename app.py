@@ -39,11 +39,7 @@ def build_plot():
 @app.route('/pos', methods=['GET'])
 def build_pos_plot():
     mfs.make_mf(request)
-    fig = mfs.current.plot_D()
-    output = io.BytesIO()
-    FigureCanvas(fig).print_png(output)
-    FigureCanvas(fig).print_png(output)
-    return output.getvalue()
+    return mfs.current.get_unit_directions()
     
 
 
