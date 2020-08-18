@@ -16,7 +16,6 @@ class MatchedFilters():
         args = r.args.to_dict(flat=False)
         mf = MatchedFilter(int(args['x'][0]), int(args['y'][0]),
                            list(map(float, args['fov[]'])),
-                           args['fovType'][0],
                            orientation=list(map(float, args['orientation[]'])),
                            axis=list(map(float, args['axis[]'])))
         self.current = mf
