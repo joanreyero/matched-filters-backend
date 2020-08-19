@@ -13,11 +13,25 @@ class MatchedFilter():
         
         self.fovx, self.fovy = MatchedFilter._get_fov(fov)
 
-        orientation = np.array(orientation, dtype=float)
-        self.rot_mat = self._rotation_matrix(orientation)
-        axis = np.array(axis, dtype=float)
-        self.axis = np.matmul(self._rotation_matrix(axis).T, np.array([0, 0, 1]))
-        self.D = self._get_viewing_directions(orientation)
+        # Transform orientation to float
+        orientation = map(float, orientation)
+
+        
+        self.origin_rotation_matrix = self._rotation_matrix(orientation)
+        
+        # Transform origin to camera coordinates
+        self.origin_to_cam = np.array([[0, 1, 0], [0, 0, 1], [1, 0, 0]])
+
+        
+        # Camera rotation matrix in camera coordinates
+        self.cam_rot_matrix = np.matmul((self.origin_to_cam), self.origin_rotation_matrix)
+
+        # Axis rotated to desired orientation in origin coordinates
+        self.axis = np.matmul(self._rotation_matrix(map(float, axis)),
+                              np.array([1, 0, 0]))
+
+        
+        self.D = self._get_viewing_directions()
         self.matched_filter = self.generate_filter()
 
 
@@ -30,26 +44,26 @@ class MatchedFilter():
             fovy = 179
         return np.deg2rad(fovx), np.deg2rad(fovy)
     
-    def _get_viewing_directions(self, orientation):
+    def _get_viewing_directions(self):
         vertical_views = (((np.arange(self.cam_h, dtype=float) -
                             self.cam_h / 2.0) / float(self.cam_h)) *
                           self.fovy)
         horizontal_views = (((np.arange(self.cam_w, dtype=float) -
                               self.cam_w / 2.0) / float(self.cam_w)) *
                             self.fovx)
-        #vertical_views = ((np.arange(self.cam_h, dtype=float) - self.cam_h / 2.0) / float(self.cam_h)) * np.deg2rad(self.fovy)
-        #horizontal_views = ((np.arange(self.cam_w, dtype=float) - self.cam_w / 2.0) / float(self.cam_w)) * np.deg2rad(self.fovx)
 
         D = np.ones([self.cam_h, self.cam_w, 3])
         D[:, :, 0], D[:, :, 1] = np.meshgrid(np.tan(horizontal_views),
                                              np.tan(vertical_views))
-        D = self._rotate_viewing_directions(D, orientation)
+
+        D = self._rotate_viewing_directions(D)
         return D
 
-    def _rotate_viewing_directions(self, D, orientation):
+    def _rotate_viewing_directions(self, D):
         for ii in range(self.cam_h):
             for jj in range(self.cam_w):
-                D[ii, jj, :] = np.matmul(D[ii, jj, :], self.rot_mat)
+ ###               D[ii, jj, :] = np.matmul(self.origin_rotation_matrix, D[ii, jj, :])
+                D[ii, jj, :] = np.matmul(np.linalg.inv(self.cam_rot_matrix), D[ii, jj, :])
         return D
 
     def _rotation_matrix(self, orientation):
@@ -59,9 +73,11 @@ class MatchedFilter():
           y - roll
           z - yaw
         """
-        pitch, roll, yaw = orientation
-        rx = np.deg2rad(pitch)
-        ry = np.deg2rad(roll)
+        orientation = list(orientation)
+        print('ori', orientation)
+        roll, pitch, yaw = orientation
+        rx = np.deg2rad(roll)
+        ry = np.deg2rad(pitch)
         rz = np.deg2rad(yaw)
 
         Rx = np.array([[1, 0, 0], [0, np.cos(rx), -np.sin(rx)],
@@ -79,8 +95,7 @@ class MatchedFilter():
         sin_theta = np.linalg.norm(self.D[:, :, 0:2], axis=2) + 1e-14
         sin_theta = np.repeat(sin_theta[:, :, np.newaxis], 2, axis=2)
         mag_temp = np.linalg.norm(self.D, axis=2)
-        D = self.D / np.expand_dims(mag_temp, axis=2)
-        
+        D = self.D #/ np.expand_dims(mag_temp, axis=2)
         mf = -np.cross(np.cross(D, self.axis), D)[:, :, 0:2] / sin_theta
         return mf
 
@@ -115,31 +130,7 @@ class MatchedFilter():
                     V[::step_size, ::step_size],
                     pivot='mid', scale=scale)
 
-        plt.show()
-        return fig
-    
-    def  plot_D(self, show=False):
-        import matplotlib.pyplot as plt
-        from matplotlib.figure import Figure
-        from mpl_toolkits.mplot3d import Axes3D
-        print(self.rot_mat)
-        V = np.matmul(np.linalg.inv(self.rot_mat), np.array([0, 0, 1]))
-        if not show:
-            fig = Figure()
-
-        else:
-            fig = plt.figure()
-#        ax = Axes3d(fig)
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_xlim3d(-1, 1)
-        ax.set_ylim3d(-1, 1)
-        ax.set_zlim3d(-1, 1)
-        ax.set_xlabel('X axis')
-        ax.set_ylabel('Y axis')
-        ax.set_zlabel('Z axis')
-        ax.quiver(0, 0, 0, V[0], V[1], V[2], normalize=True)
-        ax.quiver(0, 0, 0, self.axis[0], self.axis[1], self.axis[2], normalize=True)
-        plt.show()
+        #plt.show()
         return fig
 
     def get_unit_directions(self):
@@ -147,13 +138,19 @@ class MatchedFilter():
         def get_unit(v, shorter=1):
             return list(v / (np.linalg.norm(v) * shorter))
 
+        print(self.D.shape)
+
         return {
-            'camx': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
-                                       np.array([1, 0, 0])), shorter=1.2),
-            'camy': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
-                                       np.array([0, 1, 0])), shorter=1.2),
-            'camz': get_unit(np.matmul(np.linalg.inv(self.rot_mat),
-                                       np.array([0, 0, 1])), shorter=1.2),
+            # 'camx': get_unit(np.matmul(np.linalg.inv(self.origin_to_cam), self.cam_rot_matrix[0,:], shorter=1.2),
+            # 'camy': get_unit(np.matmul(np.linalg.inv(self.origin_to_cam), self.cam_rot_matrix[1,:]), shorter=1.2),
+            # 'camz': get_unit(np.matmul(np.linalg.inv(self.origin_to_cam), self.cam_rot_matrix[2,:]), shorter=1.2),
+            # 'camx': get_unit(np.matmul(self.origin_to_cam, self.cam_rot_matrix[0,:]), shorter=1.2),
+            # 'camy': get_unit(np.matmul(self.origin_to_cam, self.cam_rot_matrix[1,:]), shorter=1.2),
+            # 'camz': get_unit(np.matmul(self.origin_to_cam, self.cam_rot_matrix[2,:]), shorter=1.2),
+            'camx': list(self.D[200,400,:]),
+            'camy': list(self.D[180,320,:]),
+            'camz': list(self.D[140,260,:]),
+
             'axis': get_unit(self.axis)
         }
 
